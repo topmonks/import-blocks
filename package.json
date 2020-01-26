@@ -1,0 +1,17 @@
+{
+  "name": "rskstats",
+  "version": "1.0.0",
+  "description": "",
+  "main": "import-blocks.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.7.2",
+    "influx": "^5.5.1",
+    "progress": "^2.0.3",
+    "web3": "^1.2.5-rc.0"
+  }
+}
