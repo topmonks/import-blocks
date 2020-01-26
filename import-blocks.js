@@ -54,9 +54,6 @@ async function stats() {
       .then(fields)
       .then(async data => {
         await db.writePoints([data]);
-        if (data.number % 1000 === 0) {
-          console.log('written block ' + data.number);
-        }
         bar.tick();
       }),
     {concurrency: 200});
