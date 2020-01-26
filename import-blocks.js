@@ -1,20 +1,29 @@
 const Web3 = require('web3');
 const Promise = require('bluebird');
 const Influx = require('influx');
-const progress = require('cli-progress');
+const Progress = require('progress');
 
 const nodeUrl = "http://192.168.1.26:5444";
 const dbUrl = "http://192.168.1.26:8086/rsk";
 
 const web3 = new Web3(new Web3.providers.HttpProvider(nodeUrl), null, {});
 const db = new Influx.InfluxDB(dbUrl);
-const start =
+const start = process.argv[2];
+const end = process.argv[3];
+if (!start || !end || start > end) {
+  console.log("start and end block hast to be specified as args");
+  process.exit(1);
+}
 
 const range = (start, end) => {
   let nums = [];
   for (let i = start; i <= end; i++) nums.push(i);
   return nums;
 };
+
+const blocks = range(start, end);
+console.log(`importing blocks ${start} -> ${end}`);
+const bar = new Progress('[:bar] :current/:total :rate/bps :etas',{total: blocks.length});
 
 const fields = block => {
   const {number, miner, timestamp, gasUsed, gasLimit, size} = block;
@@ -35,10 +44,9 @@ const fields = block => {
 };
 
 async function stats() {
-  console.log(new Date());
   await db.query('CREATE DATABASE rsk WITH SHARD DURATION 30d NAME myrp');
-  const blocks = await Promise.map(
-    range(0, 500000),
+  await Promise.map(
+    blocks,
     num => web3.eth.getBlock(num)
       .then(fields)
       .then(async data => {
@@ -46,10 +54,9 @@ async function stats() {
         if (data.number % 1000 === 0) {
           console.log('written block ' + data.number);
         }
+        bar.tick();
       }),
     {concurrency: 200});
-  console.log(blocks);
-  console.log(new Date());
 }
 
 stats().catch(e => {

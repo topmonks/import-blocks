@@ -1,0 +1,51 @@
+version: '3.3'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana:/var/lib/grafana
+    networks:
+      - net
+    logging:
+      driver: json-file
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == ethereum-sas
+      resources:
+        reservations:
+          memory: 128M
+        limits:
+          memory: 256M
+  influx:
+    image: influxdb:1.7
+    ports:
+      - 8086:8086
+    volumes:
+      - influx:/var/lib/influxdb
+    networks:
+      - net
+    logging:
+      driver: json-file
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == ethereum-sas
+      resources:
+        reservations:
+          memory: 128M
+        limits:
+          memory: 256M
+networks:
+  net:
+    driver: overlay
+volumes:
+  influx:
+    driver: local
+  grafana:
+    driver: local
