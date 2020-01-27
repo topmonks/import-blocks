@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "bluebird": "^3.7.2",
+    "commander": "^4.1.0",
     "influx": "^5.5.1",
     "progress": "^2.0.3",
     "web3": "^1.2.5-rc.0"
