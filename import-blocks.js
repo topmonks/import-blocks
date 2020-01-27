@@ -6,6 +6,7 @@ const Progress = require('progress');
 const nodeUrl = "http://192.168.1.26:5444";
 const dbUrl = "http://192.168.1.26:8086/rsk";
 const measurement = 'block';
+const concurrency = 200;
 
 const web3 = new Web3(new Web3.providers.HttpProvider(nodeUrl), null, {});
 const db = new Influx.InfluxDB(dbUrl);
@@ -56,7 +57,7 @@ async function stats() {
         await db.writePoints([data]);
         bar.tick();
       }),
-    {concurrency: 200});
+    {concurrency});
 }
 
 stats().catch(e => {
