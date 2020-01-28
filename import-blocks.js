@@ -9,12 +9,13 @@ program
   .option('-s, --start <block>', 'import from block number')
   .option('-e, --end <block>', 'import to block number')
   .option('-u, --url <server>', 'node url')
-  .option('-d, --db <url>', 'influx db url');
+  .option('-d, --db <url>', 'influx db url')
+  .option('-c, --concurrency <requests>', 'batch of blocks imported concurrently', 100);
 program.parse(process.argv);
 
 const nodeUrl = program.url || "http://192.168.1.26:5444";
 const dbUrl = program.db || "http://192.168.1.26:8086/rsk";
-const concurrency = 200;
+const concurrency = Number(program.concurrency);
 
 const web3 = new Web3(new Web3.providers.HttpProvider(nodeUrl), null, {});
 const db = new Influx.InfluxDB(dbUrl);
@@ -26,7 +27,7 @@ const range = (start, end) => {
     throw new Error("both start and end block has to be specified as args");
   }
   let nums = [];
-  for (let i = start; i <= end; i++) nums.push(i);
+  for (let i = end; i >= start; i--) nums.push(i);
   return nums;
 };
 
