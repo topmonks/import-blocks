@@ -40,6 +40,7 @@ const blockMeasurement = block => {
     fields: {
       number, gasUsed, gasLimit, size, hash,
       transactions: block.transactions.length,
+      minerAddress: miner,
       uncles: block.uncles.length,
       minimumGasPrice: Number(web3.utils.fromWei(block.minimumGasPrice, 'gwei')),
       difficulty: Number(web3.utils.fromWei(block.difficulty, 'ether')),
@@ -57,6 +58,8 @@ const transactionMeasurement = (tx, block) => {
     timestamp: block.timestamp*1000000000,
     fields: {
       hash, gas, blockNumber, input,
+      fromAddress: from,
+      toAddress: to,
       value: Number(web3.utils.fromWei(tx.value, 'ether')),
       gasPrice: Number(web3.utils.fromWei(tx.gasPrice, 'gwei'))
     }
