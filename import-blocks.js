@@ -95,7 +95,6 @@ async function stats() {
     blocks,
     num => web3.eth.getBlock(num)
       .then(async block => {
-        console.log(block);
         let points = [blockMeasurement(block)];
         if (transactions) {
           await Promise.map(block.transactions, async txHash => {
