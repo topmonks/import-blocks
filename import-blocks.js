@@ -51,7 +51,8 @@ const blockMeasurement = block => {
 };
 
 const transactionMeasurement = (tx, block) => {
-  const {from, to, transactionIndex, gas, hash, blockNumber, input} = tx;
+  const {from, transactionIndex, gas, hash, blockNumber, input} = tx;
+  const to = tx.to || "newContract";
   return {
     measurement: 'transaction',
     tags: {from, to, transactionIndex},
