@@ -9,6 +9,7 @@ program
   .option('-s, --start <block>', 'import from block number')
   .option('-e, --end <block>', 'import to block number')
   .option('-u, --url <server>', 'node url')
+  .option('-x, --extension <ext>', 'block data extension, supported: rsk,eth')
   .option('-d, --db <url>', 'influx db url')
   .option('-c, --concurrency <requests>', 'batch of blocks imported concurrently', 100);
 program.parse(process.argv);
@@ -19,8 +20,7 @@ const concurrency = Number(program.concurrency);
 
 const web3 = new Web3(new Web3.providers.HttpProvider(nodeUrl), null, {});
 const db = new Influx.InfluxDB(dbUrl);
-let {start, end, transactions} = program;
-const auto = !start && !end;
+let {start, end, transactions, extension} = program;
 
 const range = (start, end) => {
   if (start === null || end === null || start > end) {
@@ -32,22 +32,28 @@ const range = (start, end) => {
 };
 
 const blockMeasurement = block => {
-  const {number, miner, timestamp, gasUsed, gasLimit, size, hash} = block;
-  return {
+  const {number, miner, timestamp, gasUsed, gasLimit, size, hash, extraData} = block;
+  const measurement = {
     measurement: 'block',
     tags: {miner},
     timestamp: timestamp*1000000000,
     fields: {
-      number, gasUsed, gasLimit, size, hash,
+      number, gasUsed, gasLimit, size, hash, extraData,
       transactions: block.transactions.length,
       minerAddress: miner,
       uncles: block.uncles.length,
-      minimumGasPrice: Number(web3.utils.fromWei(block.minimumGasPrice, 'gwei')),
       difficulty: Number(web3.utils.fromWei(block.difficulty, 'ether')),
-      paidFees: Number(web3.utils.fromWei(block.paidFees, 'gwei')),
       totalDifficulty: Number(web3.utils.fromWei(block.totalDifficulty, 'mether'))
     }
+  };
+  if (extension === 'rsk') {
+    measurement.fields = {
+      ...measurement.fields,
+      paidFees: Number(web3.utils.fromWei(block.paidFees, 'gwei')),
+      minimumGasPrice: Number(web3.utils.fromWei(block.minimumGasPrice, 'gwei'))
+    };
   }
+  return measurement;
 };
 
 const transactionMeasurement = (tx, block) => {
@@ -69,19 +75,23 @@ const transactionMeasurement = (tx, block) => {
 };
 
 async function stats() {
-  await db.query('CREATE DATABASE rsk WITH SHARD DURATION 30d NAME myrp');
+  await db.query(`CREATE DATABASE ${db._options.database} WITH SHARD DURATION 30d NAME myrp`);
+  const latest = await web3.eth.getBlock('latest');
   if (!start || !end) {
     start = start || await db.query('SELECT max("number") FROM "block"').then(([res]) => res && res.max) + 1 || 0;
-    end = end || await web3.eth.getBlockNumber();
+    end = end || latest.number;
+  }
+  if (!extension) {
+    if (latest.paidFees !== undefined && latest.minimumGasPrice !== undefined) extension = 'rsk';
   }
   const blocks = range(start, end);
-  console.log(`importing blocks ${transactions ? 'with tra' +
-    'nsactions' : ''} ${start} -> ${end}`);
+  console.log(`importing ${extension ? extension : 'eth'} blocks ${transactions ? 'and transactions ' : ''}${start} -> ${end}`);
   const bar = new Progress('[:bar] :current/:total :ratebps :etas',{total: blocks.length});
   await Promise.map(
     blocks,
     num => web3.eth.getBlock(num)
       .then(async block => {
+        console.log(block);
         let points = [blockMeasurement(block)];
         if (transactions) {
           await Promise.map(block.transactions, async txHash => {
@@ -91,7 +101,8 @@ async function stats() {
         }
         return points;
       }).then(async points => {
-        await db.writePoints(points);
+        //await db.writePoints(points);
+        console.log(points);
         bar.tick();
       }),
     {concurrency});
