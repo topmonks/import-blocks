@@ -11,6 +11,7 @@ program
   .option('-u, --url <server>', 'node url')
   .option('-x, --extension <ext>', 'block data extension, supported: rsk,eth')
   .option('-d, --db <url>', 'influx db url')
+  .option('-o, --stdout', 'outputs to stdout instead of db')
   .option('-c, --concurrency <requests>', 'batch of blocks imported concurrently', 100);
 program.parse(process.argv);
 
@@ -20,7 +21,8 @@ const concurrency = Number(program.concurrency);
 
 const web3 = new Web3(new Web3.providers.HttpProvider(nodeUrl), null, {});
 const db = new Influx.InfluxDB(dbUrl);
-let {start, end, transactions, extension} = program;
+let {start, end, transactions, extension, stdout} = program;
+let bar;
 
 const range = (start, end) => {
   if (start === null || end === null || start > end) {
@@ -85,8 +87,10 @@ async function stats() {
     if (latest.paidFees !== undefined && latest.minimumGasPrice !== undefined) extension = 'rsk';
   }
   const blocks = range(start, end);
-  console.log(`importing ${extension ? extension : 'eth'} blocks ${transactions ? 'and transactions ' : ''}${start} -> ${end}`);
-  const bar = new Progress('[:bar] :current/:total :ratebps :etas',{total: blocks.length});
+  if (!stdout) {
+    console.log(`importing ${extension ? extension : 'eth'} blocks ${transactions ? 'and transactions ' : ''}${start} -> ${end}`);
+    bar = new Progress('[:bar] :current/:total :ratebps :etas',{total: blocks.length});
+  }
   await Promise.map(
     blocks,
     num => web3.eth.getBlock(num)
@@ -101,9 +105,12 @@ async function stats() {
         }
         return points;
       }).then(async points => {
-        //await db.writePoints(points);
-        console.log(points);
-        bar.tick();
+        if (stdout) {
+          console.log(points);
+        } else {
+          await db.writePoints(points);
+          bar.tick();
+        }
       }),
     {concurrency});
 }
