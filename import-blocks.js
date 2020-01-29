@@ -78,13 +78,13 @@ const transactionMeasurement = (tx, block) => {
 
 async function stats() {
   await db.query(`CREATE DATABASE ${db._options.database} WITH SHARD DURATION 30d NAME myrp`);
-  const latest = await web3.eth.getBlock('latest');
+  const first = await web3.eth.getBlock(0);
   if (!start || !end) {
     start = start || await db.query('SELECT max("number") FROM "block"').then(([res]) => res && res.max) + 1 || 0;
-    end = end || latest.number;
+    end = end || first.number;
   }
   if (!extension) {
-    if (latest.paidFees !== undefined && latest.minimumGasPrice !== undefined) extension = 'rsk';
+    if (first.paidFees !== undefined && first.minimumGasPrice !== undefined) extension = 'rsk';
   }
   const blocks = range(start, end);
   if (!stdout) {
