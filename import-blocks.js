@@ -81,7 +81,7 @@ async function stats() {
   const first = await web3.eth.getBlock(0);
   if (!start || !end) {
     start = start || await db.query('SELECT max("number") FROM "block"').then(([res]) => res && res.max) + 1 || 0;
-    end = end || first.number;
+    end = end || await web3.eth.getBlockNumber();
   }
   if (!extension) {
     if (first.paidFees !== undefined && first.minimumGasPrice !== undefined) extension = 'rsk';
